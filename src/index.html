@@ -6,6 +6,24 @@
     <title>ThreeJS Starter</title>
 </head>
 <body>
-    <canvas class="webgl"></canvas>
+    <div id="instructions">
+      <div class="content">
+        <p>Stack the blocks on top of each other</p>
+        <p>Click, tap or press Space when a block is above the stack. Can you reach the blue color blocks?</p>
+        <p>Click, tap or press Space to start game</p>
+      </div>
+    </div>
+
+    <div id="results">
+      <div class="content">
+        <p>You missed the block</p>
+        <div>Your score is <span id="final-score">0</span></div>
+        <p>To reset the game press R</p>
+      </div>
+    </div>
+
+    <div id="score">0</div>
+
+    <canvas id="webgl"></canvas>
 </body>
 </html>
