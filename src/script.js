@@ -23,8 +23,7 @@ const resultsElement = document.getElementById("results");
 const canvas = document.getElementById('webgl');
 
 const textureLoader = new THREE.TextureLoader()
-const legoTexture = textureLoader.load('/BrickMap.png')
-const groundTexture = textureLoader.load('/GroundMap.png')
+const legoTexture = textureLoader.load('./BrickMap.png')
 
 init();
 
