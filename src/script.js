@@ -3,16 +3,18 @@ import * as THREE from 'three'
 import CANNON from 'cannon'
 
 
-let camera, scene, renderer; // ThreeJS globals
-let world; // CannonJs world
-let lastTime; // Last timestamp of animation
-let stack; // Parts that stay solid on top of each other
-let overhangs; // Overhanging parts that fall down
-const boxHeight = 1; // Height of each layer
-const originalBoxSize = 3; // Original width and height of a box
+let camera, scene, renderer;
+let world;
+let lastTime;
+let stack;
+let overhangs;
+const boxHeight = 1;
+const originalBoxSize = 3;
 let autopilot;
 let gameEnded;
-let robotPrecision; // Determines how precise the game is on autopilot
+let robotPrecision;
+
+window.focus()
 
 const scoreElement = document.getElementById("score");
 const finalScoreElement = document.getElementById("final-score")
@@ -22,6 +24,7 @@ const canvas = document.getElementById('webgl');
 
 const textureLoader = new THREE.TextureLoader()
 const legoTexture = textureLoader.load('/BrickMap.png')
+const groundTexture = textureLoader.load('/GroundMap.png')
 
 init();
 
@@ -119,6 +122,13 @@ function startGame() {
     addLayer(-10, 0, originalBoxSize, originalBoxSize, "x");
   }
 
+  
+  const groundGeometry = new THREE.BoxGeometry(100, 0.1, 100);
+  const groundMaterial = new THREE.MeshStandardMaterial({ color:0xc68767 });
+  const mesh = new THREE.Mesh(groundGeometry, groundMaterial);
+  mesh.position.set(-2, -2, -2);
+  scene.add(mesh);
+
   if (camera) {
     // Reset camera positions
     camera.position.set(4, 4, 4);
@@ -154,8 +164,6 @@ function generateBox(x, y, z, width, depth, falls) {
     new CANNON.Vec3(width / 2, boxHeight / 2, depth / 2)
   );
   let mass = falls ? 5 : 0; // If it shouldn't fall then setting the mass to zero will keep it stationary
-  mass *= width / originalBoxSize; // Reduce mass proportionately by size
-  mass *= depth / originalBoxSize; // Reduce mass proportionately by size
   const body = new CANNON.Body({ mass, shape });
   body.position.set(x, y, z);
   world.addBody(body);
