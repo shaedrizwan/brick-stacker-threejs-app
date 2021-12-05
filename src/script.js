@@ -152,7 +152,7 @@ function addOverhang(x, z, width, depth) {
 function generateBox(x, y, z, width, depth, falls) {
   // ThreeJS
   const geometry = new THREE.BoxGeometry(width, boxHeight, depth);
-  const color = new THREE.Color(`hsl(${10 + stack.length * 4}, 100%, 50%)`);
+  const color = new THREE.Color(`hsl(${150 + stack.length * 4}, 100%, 50%)`);
   const material = new THREE.MeshStandardMaterial({ color });
   material.normalMap = legoTexture;
   const mesh = new THREE.Mesh(geometry, material);
