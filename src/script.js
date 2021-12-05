@@ -10,9 +10,8 @@ let stack;
 let overhangs;
 const boxHeight = 1;
 const originalBoxSize = 3;
-let autopilot;
+let gameStarted;
 let gameEnded;
-let robotPrecision;
 
 window.focus()
 
@@ -27,22 +26,16 @@ const legoTexture = textureLoader.load('./BrickMap.png')
 
 init();
 
-// Determines how precise the game is on autopilot
-function setRobotPrecision() {
-  robotPrecision = Math.random() * 1 - 0.5;
-}
-
 function init() {
-  autopilot = true;
-  gameEnded = false;
+  gameStarted = false;
+  gameEnded = true;
   lastTime = 0;
   stack = [];
   overhangs = [];
-  setRobotPrecision();
 
   // Initialize CannonJS
   world = new CANNON.World();
-  world.gravity.set(0, -10, 0); // Gravity pulls things down
+  world.gravity.set(0, -10, 0);
   world.broadphase = new CANNON.NaiveBroadphase();
   world.solver.iterations = 40;
 
@@ -50,27 +43,21 @@ function init() {
   const aspect = window.innerWidth / window.innerHeight;
   const width = 10;
   const height = width / aspect;
-
-
-  camera = new THREE.PerspectiveCamera(
-    80, // field of view
-    aspect, // aspect ratio
-    1, // near plane
-    200 // far plane
-  );
-
-
-  camera.position.set(3, 4, 6);
-  camera.lookAt(0, 0, 0);
-
+  
   scene = new THREE.Scene();
   scene.background = new THREE.Color( 0x87ceeb );
 
-  // Foundation
-  addLayer(0, 0, originalBoxSize, originalBoxSize);
+  
+  // Initial Camera
+  camera = new THREE.PerspectiveCamera(85,aspect,1,200);
+  camera.position.set(4, 4, 4);
+  camera.lookAt(0, 0, 0);
 
-  // First layer
-  addLayer(-10, 0, originalBoxSize, originalBoxSize, "x");
+
+  //Inital Steady Bricks
+  addLayer(0, 0, originalBoxSize, originalBoxSize);
+  addLayer(-2, 0, originalBoxSize, originalBoxSize);
+  addLayer(-2, -2, originalBoxSize, originalBoxSize);
 
   // Set up lights
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -84,13 +71,37 @@ function init() {
   renderer = new THREE.WebGLRenderer({ canvas:canvas,antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setAnimationLoop(animation);
-//   document.body.appendChild(renderer.domElement);
+}
+
+
+window.addEventListener("mousedown", eventHandler);
+window.addEventListener("touchstart", eventHandler);
+window.addEventListener("keydown", function (event) {
+  if (event.key == " ") {
+    event.preventDefault();
+    if(gameEnded){
+      startGame()
+    }else{
+      eventHandler();
+    }
+    return;
+  }
+  if (event.key == "R" || event.key == "r") {
+    event.preventDefault();
+    startGame();
+    return;
+  }
+});
+
+function eventHandler() {
+  if (!gameStarted) startGame();
+  else splitBlockAndAddNextOneIfOverlaps();
 }
 
 
 
 function startGame() {
-  autopilot = false;
+  gameStarted = true;
   gameEnded = false;
   lastTime = 0;
   stack = [];
@@ -99,37 +110,37 @@ function startGame() {
   if (instructionsElement) instructionsElement.style.display = "none";
   if (resultsElement) resultsElement.style.display = "none";
   if (scoreElement) scoreElement.innerText = 0;
-
+  
+  // Remove every object from world
   if (world) {
-    // Remove every object from world
     while (world.bodies.length > 0) {
       world.remove(world.bodies[0]);
     }
   }
 
+  // Remove every Bricks from the Scene
   if (scene) {
-    // Remove every Mesh from the scene
     while (scene.children.find((c) => c.type == "Mesh")) {
       const mesh = scene.children.find((c) => c.type == "Mesh");
       scene.remove(mesh);
     }
 
-    // Foundation
+    // Foundation Brick
     addLayer(0, 0, originalBoxSize, originalBoxSize);
 
-    // First layer
+    // First Brick
     addLayer(-10, 0, originalBoxSize, originalBoxSize, "x");
   }
 
-  
+  // Ground Plane
   const groundGeometry = new THREE.BoxGeometry(100, 0.1, 100);
   const groundMaterial = new THREE.MeshStandardMaterial({ color:0xc68767 });
   const mesh = new THREE.Mesh(groundGeometry, groundMaterial);
   mesh.position.set(-2, -2, -2);
   scene.add(mesh);
 
+  // Reset camera positions
   if (camera) {
-    // Reset camera positions
     camera.position.set(4, 4, 4);
     camera.lookAt(0, 0, 0);
   }
@@ -162,7 +173,7 @@ function generateBox(x, y, z, width, depth, falls) {
   const shape = new CANNON.Box(
     new CANNON.Vec3(width / 2, boxHeight / 2, depth / 2)
   );
-  let mass = falls ? 5 : 0; // If it shouldn't fall then setting the mass to zero will keep it stationary
+  let mass = falls ? 5 : 0;
   const body = new CANNON.Body({ mass, shape });
   body.position.set(x, y, z);
   world.addBody(body);
@@ -199,25 +210,6 @@ function cutBox(topLayer, overlap, size, delta) {
   topLayer.cannonjs.addShape(shape);
 }
 
-window.addEventListener("mousedown", eventHandler);
-window.addEventListener("touchstart", eventHandler);
-window.addEventListener("keydown", function (event) {
-  if (event.key == " ") {
-    event.preventDefault();
-    eventHandler();
-    return;
-  }
-  if (event.key == "R" || event.key == "r") {
-    event.preventDefault();
-    startGame();
-    return;
-  }
-});
-
-function eventHandler() {
-  if (autopilot) startGame();
-  else splitBlockAndAddNextOneIfOverlaps();
-}
 
 function splitBlockAndAddNextOneIfOverlaps() {
   if (gameEnded) return;
@@ -252,11 +244,13 @@ function splitBlockAndAddNextOneIfOverlaps() {
 
     addOverhang(overhangX, overhangZ, overhangWidth, overhangDepth);
 
-    // Next layer
+    // Next Brick attributes
     const nextX = direction == "x" ? topLayer.threejs.position.x : -10;
     const nextZ = direction == "z" ? topLayer.threejs.position.z : -10;
-    const newWidth = topLayer.width; // New layer has the same size as the cut top layer
-    const newDepth = topLayer.depth; // New layer has the same size as the cut top layer
+    console.log("topLayer.threejs.position.x: ",topLayer.threejs.position.x)
+    console.log("topLayer.threejs.position.z: ",topLayer.threejs.position.z)
+    const newWidth = topLayer.width;
+    const newDepth = topLayer.depth;
     const nextDirection = direction == "x" ? "z" : "x";
 
     if (scoreElement) scoreElement.innerText = stack.length - 1;
@@ -281,7 +275,7 @@ function missedTheSpot() {
   scene.remove(topLayer.threejs);
 
   gameEnded = true;
-  if (resultsElement && !autopilot) resultsElement.style.display = "flex";
+  if (resultsElement) resultsElement.style.display = "flex";
 }
 
 function animation(time) {
@@ -290,37 +284,18 @@ function animation(time) {
     const speed = 0.008;
 
     const topLayer = stack[stack.length - 1];
-    const previousLayer = stack[stack.length - 2];
 
-    // The top level box should move if the game has not ended AND
-    // it's either NOT in autopilot or it is in autopilot and the box did not yet reach the robot position
-    const boxShouldMove =
-      !gameEnded &&
-      (!autopilot ||
-        (autopilot &&
-          topLayer.threejs.position[topLayer.direction] <
-            previousLayer.threejs.position[topLayer.direction] +
-              robotPrecision));
-
-    if (boxShouldMove) {
-      // Keep the position visible on UI and the position in the model in sync
+    // Brick movement
+    if (!gameEnded) {
       topLayer.threejs.position[topLayer.direction] += speed * timePassed;
       topLayer.cannonjs.position[topLayer.direction] += speed * timePassed;
 
-      // If the box went beyond the stack then show up the fail screen
       if (topLayer.threejs.position[topLayer.direction] > 10) {
         missedTheSpot();
       }
-    } else {
-      // If it shouldn't move then is it because the autopilot reached the correct position?
-      // Because if so then next level is coming
-      if (autopilot) {
-        splitBlockAndAddNextOneIfOverlaps();
-        setRobotPrecision();
-      }
-    }
+    } 
 
-    // 4 is the initial camera height
+    // Increase camera height
     if (camera.position.y < boxHeight * (stack.length - 2) + 4) {
       camera.position.y += speed * timePassed;
     }
@@ -332,7 +307,7 @@ function animation(time) {
 }
 
 function updatePhysics(timePassed) {
-  world.step(timePassed / 1000); // Step the physics world
+  world.step(timePassed / 1000);
 
   // Copy coordinates from Cannon.js to Three.js
   overhangs.forEach((element) => {
