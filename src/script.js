@@ -263,7 +263,7 @@ function cutBox(topLayer, overlap, size, delta) {
 }
 
 function addOverhang(x, z, width, depth) {
-  const y = boxHeight * (stack.length - 1); // Add the new box one the same layer
+  const y = boxHeight * (stack.length - 1); // Add the new box on the same layer
   const overhang = generateBox(x, y, z, width, depth, true);
   overhangs.push(overhang);
 }
@@ -279,17 +279,15 @@ function missedTheSpot() {
   if (resultsElement) resultsElement.style.display = "flex";
 }
 
-function animation(time) {
-  if (lastTime) {
-    const timePassed = time - lastTime;
-    const speed = 0.008;
+function animation() {
+    const speed = 0.15;
 
     const topLayer = stack[stack.length - 1];
 
     // Brick movement
     if (!gameEnded) {
-      topLayer.threejs.position[topLayer.direction] += speed * timePassed;
-      topLayer.cannonjs.position[topLayer.direction] += speed * timePassed;
+      topLayer.threejs.position[topLayer.direction] += speed;
+      topLayer.cannonjs.position[topLayer.direction] += speed;
 
       if (topLayer.threejs.position[topLayer.direction] > 10) {
         missedTheSpot();
@@ -298,17 +296,16 @@ function animation(time) {
 
     // Increase camera height
     if (camera.position.y < boxHeight * (stack.length - 2) + 4) {
-      camera.position.y += speed * timePassed;
+      camera.position.y += speed;
     }
 
-    updatePhysics(timePassed);
+    updatePhysics();
     renderer.render(scene, camera);
   }
   lastTime = time;
-}
 
-function updatePhysics(timePassed) {
-  world.step(timePassed / 1000);
+function updatePhysics() {
+  world.step(1 / 60);
 
   // Copy coordinates from Cannon.js to Three.js
   overhangs.forEach((element) => {
