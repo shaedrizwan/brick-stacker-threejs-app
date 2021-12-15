@@ -226,8 +226,6 @@ function splitBlockAndAddNextOneIfOverlaps() {
     // Next Brick attributes
     const nextX = direction == "x" ? topLayer.threejs.position.x : -10;
     const nextZ = direction == "z" ? topLayer.threejs.position.z : -10;
-    console.log("topLayer.threejs.position.x: ",topLayer.threejs.position.x)
-    console.log("topLayer.threejs.position.z: ",topLayer.threejs.position.z)
     const newWidth = topLayer.width;
     const newDepth = topLayer.depth;
     const nextDirection = direction == "x" ? "z" : "x";
@@ -245,7 +243,7 @@ function cutBox(topLayer, overlap, size, delta) {
   const newWidth = direction == "x" ? overlap : topLayer.width;
   const newDepth = direction == "z" ? overlap : topLayer.depth;
 
-  // Update metadata
+  // Update width and Depth
   topLayer.width = newWidth;
   topLayer.depth = newDepth;
 
@@ -256,7 +254,7 @@ function cutBox(topLayer, overlap, size, delta) {
   // Update CannonJS model
   topLayer.cannonjs.position[direction] -= delta / 2;
 
-  // Replace shape to a smaller one (in CannonJS you can't simply just scale a shape)
+  // Replace shape in Cannonjs to smaller one (can't update. Need to add new)
   const shape = new CANNON.Box(
     new CANNON.Vec3(newWidth / 2, boxHeight / 2, newDepth / 2)
   );
@@ -274,13 +272,6 @@ function addOverhang(x, z, width, depth) {
 function missedTheSpot() {
   const topLayer = stack[stack.length - 1];
 
-  // Turn to top layer into an overhang and let it fall down
-  addOverhang(
-    topLayer.threejs.position.x,
-    topLayer.threejs.position.z,
-    topLayer.width,
-    topLayer.depth
-  );
   world.remove(topLayer.cannonjs);
   scene.remove(topLayer.threejs);
 
