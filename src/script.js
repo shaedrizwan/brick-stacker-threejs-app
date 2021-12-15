@@ -2,7 +2,9 @@ import './style.css'
 import * as THREE from 'three'
 import CANNON from 'cannon'
 
+window.focus()
 
+// Initialize variables
 let camera, scene, renderer;
 let world;
 let lastTime;
@@ -12,8 +14,6 @@ const boxHeight = 1;
 const originalBoxSize = 3;
 let gameStarted;
 let gameEnded;
-
-window.focus()
 
 const scoreElement = document.getElementById("score");
 const finalScoreElement = document.getElementById("final-score")
@@ -136,8 +136,16 @@ function startGame() {
   const groundGeometry = new THREE.BoxGeometry(100, 0.1, 100);
   const groundMaterial = new THREE.MeshStandardMaterial({ color:0xc68767 });
   const mesh = new THREE.Mesh(groundGeometry, groundMaterial);
-  mesh.position.set(-2, -2, -2);
+  mesh.position.set(-2, -0.5, -2);
   scene.add(mesh);
+
+  const shape = new CANNON.Box(
+    new CANNON.Vec3(100,0.1,100)
+  );
+  let mass = 0;
+  const body = new CANNON.Body({ mass, shape });
+  body.position.set(-2,-0.5,-2);
+  world.addBody(body);
 
   // Reset camera positions
   if (camera) {
@@ -153,11 +161,6 @@ function addLayer(x, z, width, depth, direction) {
   stack.push(layer);
 }
 
-function addOverhang(x, z, width, depth) {
-  const y = boxHeight * (stack.length - 1); // Add the new box one the same layer
-  const overhang = generateBox(x, y, z, width, depth, true);
-  overhangs.push(overhang);
-}
 
 function generateBox(x, y, z, width, depth, falls) {
   // ThreeJS
@@ -184,30 +187,6 @@ function generateBox(x, y, z, width, depth, falls) {
     width,
     depth
   };
-}
-
-function cutBox(topLayer, overlap, size, delta) {
-  const direction = topLayer.direction;
-  const newWidth = direction == "x" ? overlap : topLayer.width;
-  const newDepth = direction == "z" ? overlap : topLayer.depth;
-
-  // Update metadata
-  topLayer.width = newWidth;
-  topLayer.depth = newDepth;
-
-  // Update ThreeJS model
-  topLayer.threejs.scale[direction] = overlap / size;
-  topLayer.threejs.position[direction] -= delta / 2;
-
-  // Update CannonJS model
-  topLayer.cannonjs.position[direction] -= delta / 2;
-
-  // Replace shape to a smaller one (in CannonJS you can't simply just scale a shape)
-  const shape = new CANNON.Box(
-    new CANNON.Vec3(newWidth / 2, boxHeight / 2, newDepth / 2)
-  );
-  topLayer.cannonjs.shapes = [];
-  topLayer.cannonjs.addShape(shape);
 }
 
 
@@ -260,6 +239,37 @@ function splitBlockAndAddNextOneIfOverlaps() {
     missedTheSpot();
   }
 }
+
+function cutBox(topLayer, overlap, size, delta) {
+  const direction = topLayer.direction;
+  const newWidth = direction == "x" ? overlap : topLayer.width;
+  const newDepth = direction == "z" ? overlap : topLayer.depth;
+
+  // Update metadata
+  topLayer.width = newWidth;
+  topLayer.depth = newDepth;
+
+  // Update ThreeJS model
+  topLayer.threejs.scale[direction] = overlap / size;
+  topLayer.threejs.position[direction] -= delta / 2;
+
+  // Update CannonJS model
+  topLayer.cannonjs.position[direction] -= delta / 2;
+
+  // Replace shape to a smaller one (in CannonJS you can't simply just scale a shape)
+  const shape = new CANNON.Box(
+    new CANNON.Vec3(newWidth / 2, boxHeight / 2, newDepth / 2)
+  );
+  topLayer.cannonjs.shapes = [];
+  topLayer.cannonjs.addShape(shape);
+}
+
+function addOverhang(x, z, width, depth) {
+  const y = boxHeight * (stack.length - 1); // Add the new box one the same layer
+  const overhang = generateBox(x, y, z, width, depth, true);
+  overhangs.push(overhang);
+}
+
 
 function missedTheSpot() {
   const topLayer = stack[stack.length - 1];
