@@ -2,12 +2,9 @@ import './style.css'
 import * as THREE from 'three'
 import CANNON from 'cannon'
 
-window.focus()
 
-// Initialize variables
 let camera, scene, renderer;
 let world;
-let lastTime;
 let stack;
 let overhangs;
 const boxHeight = 1;
@@ -19,7 +16,7 @@ const scoreElement = document.getElementById("score");
 const finalScoreElement = document.getElementById("final-score")
 const instructionsElement = document.getElementById("instructions");
 const resultsElement = document.getElementById("results");
-const canvas = document.getElementById('webgl');
+const canvas = document.getElementById('game-canvas');
 
 const textureLoader = new THREE.TextureLoader()
 const legoTexture = textureLoader.load('./BrickMap.png')
@@ -29,23 +26,22 @@ init();
 function init() {
   gameStarted = false;
   gameEnded = true;
-  lastTime = 0;
   stack = [];
   overhangs = [];
+  
+  const aspect = window.innerWidth / window.innerHeight;
+  const width = 10;
+  const height = width / aspect;
+  
+  // Initialize ThreeJS Scene
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color( 0x87ceeb );
 
   // Initialize CannonJS
   world = new CANNON.World();
   world.gravity.set(0, -10, 0);
   world.broadphase = new CANNON.NaiveBroadphase();
   world.solver.iterations = 40;
-
-  // Initialize ThreeJs
-  const aspect = window.innerWidth / window.innerHeight;
-  const width = 10;
-  const height = width / aspect;
-  
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color( 0x87ceeb );
 
   
   // Initial Camera
@@ -103,7 +99,6 @@ function eventHandler() {
 function startGame() {
   gameStarted = true;
   gameEnded = false;
-  lastTime = 0;
   stack = [];
   overhangs = [];
 
@@ -140,7 +135,7 @@ function startGame() {
   scene.add(mesh);
 
   const shape = new CANNON.Box(
-    new CANNON.Vec3(100,0.1,100)
+    new CANNON.Vec3(100/2,0.1/2,100/2)
   );
   let mass = 0;
   const body = new CANNON.Body({ mass, shape });
@@ -155,7 +150,7 @@ function startGame() {
 }
 
 function addLayer(x, z, width, depth, direction) {
-  const y = boxHeight * stack.length; // Add the new box one layer higher
+  const y = boxHeight * stack.length;
   const layer = generateBox(x, y, z, width, depth, false);
   layer.direction = direction;
   stack.push(layer);
@@ -302,7 +297,6 @@ function animation() {
     updatePhysics();
     renderer.render(scene, camera);
   }
-  lastTime = time;
 
 function updatePhysics() {
   world.step(1 / 60);
