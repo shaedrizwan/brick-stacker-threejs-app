@@ -107,7 +107,7 @@ function startGame() {
 
   if (instructionsElement) instructionsElement.style.display = "none";
   if (resultsElement) resultsElement.style.display = "none";
-  if (scoreElement) scoreElement.innerText = 0;
+  if (scoreElement) scoreElement.innerText = "0";
   
   // Remove every object from world
   if (world) {
@@ -192,10 +192,10 @@ function splitBlockAndAddNextOneIfOverlaps() {
     const newDepth = topLayer.depth;
     const nextDirection = direction == "x" ? "z" : "x";
 
-    if (scoreElement) scoreElement.innerText = stack.length - 1;
+    if (scoreElement) scoreElement.innerText = String(stack.length - 1);
     [scene,world,stack] = addLayer({x:nextX, z:nextZ, width:newWidth, depth:newDepth, direction:nextDirection,boxHeight,scene,world,stack});
   } else {
-    finalScoreElement.innerText = stack.length - 2;
+    finalScoreElement.innerText = String(stack.length - 2);
     gameEnded = missedTheSpot({stack,world,scene,resultsElement});
   }
 }

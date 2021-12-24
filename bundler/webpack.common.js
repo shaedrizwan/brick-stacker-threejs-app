@@ -10,7 +10,7 @@ module.exports = {
         filename: 'bundle.[contenthash].js',
         path: path.resolve(__dirname, '../dist')
     },
-    devtool: 'source-map',
+    devtool: false,
     plugins:
     [
         new CopyWebpackPlugin({
@@ -41,15 +41,6 @@ module.exports = {
                 use:
                 [
                     'babel-loader'
-                    // {
-                    //     loader: 'babel-loader',
-                    //     options: {
-                    //         presets: [
-                    //           '@babel/typescript', 
-                    //           '@babel/preset-env'
-                    //         ]
-                    //       }
-                    // }
                 ]
             },
 
