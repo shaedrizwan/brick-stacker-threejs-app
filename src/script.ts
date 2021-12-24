@@ -12,10 +12,10 @@ var camera, scene, renderer;
 var world;
 var stack = [];
 var overhangs = [];
-const boxHeight = 1;
-const originalBoxSize = 3;
-var gameStarted = false;
-var gameEnded = true;
+const boxHeight:number = 1;
+const originalBoxSize:number = 3;
+var gameStarted:boolean = false;
+var gameEnded:boolean = true;
 
 const scoreElement = document.getElementById("score");
 const finalScoreElement = document.getElementById("final-score")
