@@ -1,16 +1,21 @@
 import './style.css'
 import * as THREE from 'three'
 import CANNON from 'cannon'
+import {missedTheSpot} from './Components/missedTheSpot'
+import { updatePhysics } from './Components/updatePhysics';
+import { addOverhang } from './Components/addOverhang';
+import { addLayer } from './Components/addLayer';
+import { cutBox } from './Components/cutBox';
 
 
-let camera, scene, renderer;
-let world;
-let stack;
-let overhangs;
+var camera, scene, renderer;
+var world;
+var stack = [];
+var overhangs = [];
 const boxHeight = 1;
 const originalBoxSize = 3;
-let gameStarted;
-let gameEnded;
+var gameStarted = false;
+var gameEnded = true;
 
 const scoreElement = document.getElementById("score");
 const finalScoreElement = document.getElementById("final-score")
@@ -18,12 +23,10 @@ const instructionsElement = document.getElementById("instructions");
 const resultsElement = document.getElementById("results");
 const canvas = document.getElementById('game-canvas');
 
-const textureLoader = new THREE.TextureLoader()
-const legoTexture = textureLoader.load('./BrickMap.png')
 
-init();
+initializeGame();
 
-function init() {
+function initializeGame() {
   gameStarted = false;
   gameEnded = true;
   stack = [];
@@ -51,9 +54,9 @@ function init() {
 
 
   //Inital Steady Bricks
-  addLayer(0, 0, originalBoxSize, originalBoxSize);
-  addLayer(-2, 0, originalBoxSize, originalBoxSize);
-  addLayer(-2, -2, originalBoxSize, originalBoxSize);
+  [scene,world,stack] =addLayer({x:0,z: 0,width:originalBoxSize,depth:originalBoxSize,boxHeight,scene,world,stack});
+  [scene,world,stack] =addLayer({x:-2,z: 0,width:originalBoxSize,depth:originalBoxSize,boxHeight,scene,world,stack});
+  [scene,world,stack] =addLayer({x:-2,z:-2,width:originalBoxSize,depth:originalBoxSize,boxHeight,scene,world,stack});
 
   // Set up lights
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -70,15 +73,15 @@ function init() {
 }
 
 
-window.addEventListener("mousedown", eventHandler);
-window.addEventListener("touchstart", eventHandler);
+window.addEventListener("mousedown", clickEventHandler);
+window.addEventListener("touchstart", clickEventHandler);
 window.addEventListener("keydown", function (event) {
   if (event.key == " ") {
     event.preventDefault();
     if(gameEnded){
       startGame()
     }else{
-      eventHandler();
+      clickEventHandler();
     }
     return;
   }
@@ -89,7 +92,7 @@ window.addEventListener("keydown", function (event) {
   }
 });
 
-function eventHandler() {
+function clickEventHandler() {
   if (!gameStarted) startGame();
   else splitBlockAndAddNextOneIfOverlaps();
 }
@@ -121,10 +124,10 @@ function startGame() {
     }
 
     // Foundation Brick
-    addLayer(0, 0, originalBoxSize, originalBoxSize);
+    [scene,world,stack] =addLayer({x:0,z: 0,width:originalBoxSize,depth:originalBoxSize,boxHeight,scene,world,stack});
 
     // First Brick
-    addLayer(-10, 0, originalBoxSize, originalBoxSize, "x");
+    [scene,world,stack] =addLayer({x:-10,z: 0,width:originalBoxSize,depth:originalBoxSize,direction:"x",boxHeight,scene,world,stack});
   }
 
   // Ground Plane
@@ -149,47 +152,12 @@ function startGame() {
   }
 }
 
-function addLayer(x, z, width, depth, direction) {
-  const y = boxHeight * stack.length;
-  const layer = generateBox(x, y, z, width, depth, false);
-  layer.direction = direction;
-  stack.push(layer);
-}
-
-
-function generateBox(x, y, z, width, depth, falls) {
-  // ThreeJS
-  const geometry = new THREE.BoxGeometry(width, boxHeight, depth);
-  const color = new THREE.Color(`hsl(${150 + stack.length * 4}, 100%, 50%)`);
-  const material = new THREE.MeshStandardMaterial({ color });
-  material.normalMap = legoTexture;
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.position.set(x, y, z);
-  scene.add(mesh);
-
-  // CannonJS
-  const shape = new CANNON.Box(
-    new CANNON.Vec3(width / 2, boxHeight / 2, depth / 2)
-  );
-  let mass = falls ? 5 : 0;
-  const body = new CANNON.Body({ mass, shape });
-  body.position.set(x, y, z);
-  world.addBody(body);
-
-  return {
-    threejs: mesh,
-    cannonjs: body,
-    width,
-    depth
-  };
-}
-
 
 function splitBlockAndAddNextOneIfOverlaps() {
   if (gameEnded) return;
 
-  const topLayer = stack[stack.length - 1];
-  const previousLayer = stack[stack.length - 2];
+  let topLayer = stack[stack.length - 1];
+  let previousLayer = stack[stack.length - 2];
 
   const direction = topLayer.direction;
 
@@ -201,7 +169,7 @@ function splitBlockAndAddNextOneIfOverlaps() {
   const overlap = size - overhangSize;
 
   if (overlap > 0) {
-    cutBox(topLayer, overlap, size, delta);
+    topLayer = cutBox(topLayer, overlap, size, delta);
 
     // Overhang
     const overhangShift = (overlap / 2 + overhangSize / 2) * Math.sign(delta);
@@ -216,8 +184,7 @@ function splitBlockAndAddNextOneIfOverlaps() {
     const overhangWidth = direction == "x" ? overhangSize : topLayer.width;
     const overhangDepth = direction == "z" ? overhangSize : topLayer.depth;
 
-    addOverhang(overhangX, overhangZ, overhangWidth, overhangDepth);
-
+    overhangs = addOverhang({x:overhangX, z:overhangZ, width:overhangWidth, depth:overhangDepth,boxHeight,stack,overhangs,scene,world});
     // Next Brick attributes
     const nextX = direction == "x" ? topLayer.threejs.position.x : -10;
     const nextZ = direction == "z" ? topLayer.threejs.position.z : -10;
@@ -226,53 +193,13 @@ function splitBlockAndAddNextOneIfOverlaps() {
     const nextDirection = direction == "x" ? "z" : "x";
 
     if (scoreElement) scoreElement.innerText = stack.length - 1;
-    addLayer(nextX, nextZ, newWidth, newDepth, nextDirection);
+    [scene,world,stack] = addLayer({x:nextX, z:nextZ, width:newWidth, depth:newDepth, direction:nextDirection,boxHeight,scene,world,stack});
   } else {
     finalScoreElement.innerText = stack.length - 2;
-    missedTheSpot();
+    gameEnded = missedTheSpot({stack,world,scene,resultsElement});
   }
 }
 
-function cutBox(topLayer, overlap, size, delta) {
-  const direction = topLayer.direction;
-  const newWidth = direction == "x" ? overlap : topLayer.width;
-  const newDepth = direction == "z" ? overlap : topLayer.depth;
-
-  // Update width and Depth
-  topLayer.width = newWidth;
-  topLayer.depth = newDepth;
-
-  // Update ThreeJS model
-  topLayer.threejs.scale[direction] = overlap / size;
-  topLayer.threejs.position[direction] -= delta / 2;
-
-  // Update CannonJS model
-  topLayer.cannonjs.position[direction] -= delta / 2;
-
-  // Replace shape in Cannonjs to smaller one (can't update. Need to add new)
-  const shape = new CANNON.Box(
-    new CANNON.Vec3(newWidth / 2, boxHeight / 2, newDepth / 2)
-  );
-  topLayer.cannonjs.shapes = [];
-  topLayer.cannonjs.addShape(shape);
-}
-
-function addOverhang(x, z, width, depth) {
-  const y = boxHeight * (stack.length - 1); // Add the new box on the same layer
-  const overhang = generateBox(x, y, z, width, depth, true);
-  overhangs.push(overhang);
-}
-
-
-function missedTheSpot() {
-  const topLayer = stack[stack.length - 1];
-
-  world.remove(topLayer.cannonjs);
-  scene.remove(topLayer.threejs);
-
-  gameEnded = true;
-  if (resultsElement) resultsElement.style.display = "flex";
-}
 
 function animation() {
     const speed = 0.15;
@@ -285,7 +212,7 @@ function animation() {
       topLayer.cannonjs.position[topLayer.direction] += speed;
 
       if (topLayer.threejs.position[topLayer.direction] > 10) {
-        missedTheSpot();
+        gameEnded = missedTheSpot({stack,world,scene,resultsElement});
       }
     } 
 
@@ -294,16 +221,6 @@ function animation() {
       camera.position.y += speed;
     }
 
-    updatePhysics();
+    [world,overhangs] = updatePhysics(world,overhangs);
     renderer.render(scene, camera);
   }
-
-function updatePhysics() {
-  world.step(1 / 60);
-
-  // Copy coordinates from Cannon.js to Three.js
-  overhangs.forEach((element) => {
-    element.threejs.position.copy(element.cannonjs.position);
-    element.threejs.quaternion.copy(element.cannonjs.quaternion);
-  });
-}
