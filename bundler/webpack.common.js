@@ -36,11 +36,19 @@ module.exports = {
 
             // JS
             {
-                test: /\.js$/,
+                test: [/\.js$/ | /\.ts$/],
                 exclude: /node_modules/,
                 use:
                 [
-                    'babel-loader'
+                    {
+                        loader: 'babel-loader',
+                        options: {
+                            presets: [
+                              '@babel/typescript', 
+                              '@babel/preset-env'
+                            ]
+                          }
+                    }
                 ]
             },
 
